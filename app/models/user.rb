@@ -48,7 +48,8 @@ class User < Admin::AdminBase
       mgr.create_user_account(self)
     else
       self.errors.add('DB Account', 'could not be created for this user.')
-      event.description='Could not create this user.'.save
+      event.description='Could not create this user.'
+      event.save!
     end
   end
 
@@ -106,9 +107,7 @@ class User < Admin::AdminBase
   def remove
     begin
       return false if !can_access_db?
-      Admin::RemovedUser.create(self.attributes.except('id', 'created_at', 'updated_at'))
       event=Admin::UserEvent.create( { :email => self.email, :event_type =>'remove' })
-
       db_mgr=Util::UserDbManager.new({ :event=> event })
       db_mgr.pub_con.execute("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE usename = '#{self.username}'")
       db_mgr.remove_user(self.username)
@@ -121,6 +120,21 @@ class User < Admin::AdminBase
 
   def full_name
     first_name + ' ' + last_name
+  end
+
+  def display_confirmed_at
+    return '' if self.confirmed_at.nil?
+    self.confirmed_at.strftime('%Y/%m/%d')
+  end
+
+  def display_confirmation_sent_at
+    return '' if self.confirmation_sent_at.nil?
+    self.confirmation_sent_at.strftime('%Y/%m/%d')
+  end
+
+  def display_last_sign_in_at
+    return '' if self.last_sign_in_at.nil?
+    self.last_sign_in_at.strftime('%Y/%m/%d')
   end
 
   def summary_info(type=nil)
@@ -139,10 +153,6 @@ class User < Admin::AdminBase
        Last signed in: #{self.last_sign_in_at.try(:strftime,"%m/%d/%Y %H:%m")}  (#{self.last_sign_in_ip})
       "
     end
-  end
-
-  def notification_subject_line(event_type)
-    "AACT #{Rails.env.capitalize} user #{event_type}: #{self.full_name}"
   end
 
   def self.list
