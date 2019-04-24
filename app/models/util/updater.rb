@@ -271,6 +271,19 @@ module Util
       end
     end
 
+    def create_json
+      f = "#{Util::FileManager.new.dump_directory}/export/json.txt"
+      File.open(f, 'wb+') do |file|
+        cntr=0
+        Study.all.each{|s|
+          cntr = cntr + 1
+          file.write("\n{\"index\": {\"_id\": #{cntr}}}")
+          file.write("\n#{s.as_indexed_json.to_json}")
+        }
+        f.close
+      end
+    end
+
     def refresh_public_db
       log('refreshing public db...')
       # recreate public db from back-end db
