@@ -1,3 +1,4 @@
+require 'elasticsearch/model'
 class Keyword < StudyRelationship
 
   def self.top_level_label

@@ -1,3 +1,4 @@
+require 'elasticsearch/model'
 class String
   def is_missing_the_day?
     # use this method on string representations of dates.  If only one space in the string, then the day is not provided.
@@ -6,6 +7,9 @@ class String
 end
 
 class Study < ActiveRecord::Base
+  include Elasticsearch::Model
+  include Elasticsearch::Model::Callbacks
+  #include Searchable
 
   attr_accessor :xml, :with_related_records, :with_related_organizations
 

@@ -2,6 +2,7 @@ require 'active_support/all'
 
 class StudyRelationship < ActiveRecord::Base
   self.abstract_class = true;
+  include Elasticsearch::Model
   attr_accessor :xml, :opts
   belongs_to :study, :foreign_key=> 'nct_id'
 
