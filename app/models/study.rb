@@ -6,6 +6,7 @@ class String
 end
 
 class Study < ActiveRecord::Base
+  searchkick
 
   attr_accessor :xml, :with_related_records, :with_related_organizations
 

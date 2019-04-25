@@ -1,4 +1,5 @@
 class Country < StudyRelationship
+  searchkick
 
   def self.create_all_from(opts)
     countries = location_countries(opts) + removed_countries(opts)

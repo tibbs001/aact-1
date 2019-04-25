@@ -1,4 +1,5 @@
 class Facility < StudyRelationship
+  searchkick
 
   has_many :facility_contacts, autosave: true
   has_many :facility_investigators, autosave: true

@@ -1,4 +1,5 @@
 class Keyword < StudyRelationship
+  searchkick
 
   def self.top_level_label
     '//keyword'

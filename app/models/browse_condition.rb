@@ -1,4 +1,5 @@
 class BrowseCondition < StudyRelationship
+  searchkick
 
   def self.create_all_from(options={})
     nct_id=options[:nct_id]
