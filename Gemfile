@@ -5,6 +5,8 @@ ruby "2.4.5"
 gem "sprockets", ">= 3.7.2"
 gem "rubyzip", ">= 1.2.2"
 
+gem 'elasticsearch-model'
+gem 'elasticsearch-rails'
 gem 'searchkick'
 gem 'nokogiri'
 gem 'loofah', '~> 2.2.3'

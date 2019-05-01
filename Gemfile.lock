@@ -85,6 +85,11 @@ GEM
       elasticsearch-transport (= 6.3.0)
     elasticsearch-api (6.3.0)
       multi_json
+    elasticsearch-model (6.0.0)
+      activesupport (> 3)
+      elasticsearch (> 1)
+      hashie
+    elasticsearch-rails (6.0.0)
     elasticsearch-transport (6.3.0)
       faraday
       multi_json
@@ -296,6 +301,8 @@ DEPENDENCIES
   capistrano-rails (~> 1.2)
   coderay
   database_cleaner
+  elasticsearch-model
+  elasticsearch-rails
   enumerize
   execjs
   factory_girl_rails
