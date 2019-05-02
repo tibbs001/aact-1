@@ -45,10 +45,12 @@ describe Util::DbManager do
            with(headers: {'Accept'=>'*/*', 'Accept-Encoding'=>'gzip;q=1.0,deflate;q=0.6,identity;q=0.3', 'User-Agent'=>'Ruby'}).
            to_return(status: 200, body: "", headers: {})
 
+      url ="postgres://#{ENV['AACT_DB_SUPER_USERNAME']}@localhost:5432/aact_back_test"
+      con = ActiveRecord::Base.establish_connection(url).connection
+      allow(PublicBase).to receive(:connection).and_return(con)
       Study.destroy_all
-      pub_con = PublicBase.connection
-      pub_con.execute('truncate table studies cascade')
-      pub_con.execute('truncate table outcomes cascade')
+      con.execute('truncate table studies cascade')
+      con.execute('truncate table outcomes cascade')
 
 
       dm=Util::DbManager.new(:load_event=>Support::LoadEvent.create({:event_type=>'incremental',:status=>'running',:description=>'',:problems=>''}))
@@ -57,7 +59,8 @@ describe Util::DbManager do
       fm.save_static_copy
       dm.refresh_public_db
 
-      back_con = ActiveRecord::Base.establish_connection(ENV["AACT_BACK_DATABASE_URL"]).connection
+      back_con = ActiveRecord::Base.connection
+      #back_con = ActiveRecord::Base.establish_connection(ENV["AACT_BACK_DATABASE_URL"]).connection
       back_tables=back_con.execute("select * from information_schema.tables where table_schema='ctgov'")
       back_table_count=back_con.execute("select count(*) from information_schema.tables where table_schema='ctgov'").first['count'].to_i
 
@@ -65,8 +68,8 @@ describe Util::DbManager do
       PublicBase.establish_connection(
         adapter: 'postgresql',
         encoding: 'utf8',
-        hostname: ENV['AACT_PUBLIC_HOSTNAME'],
-        database: ENV['AACT_PUBLIC_DATABASE_NAME'],
+        hostname: ENV['AACT_PUBLIC_HOSTNAME'] || 'localhost',
+        database: ENV['AACT_PUBLIC_DATABASE_NAME'] || 'aact',
         username: ENV['AACT_DB_SUPER_USERNAME'])
       pub_con = PublicBase.connection
 

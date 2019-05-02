@@ -17,8 +17,8 @@ RSpec.configure do |config|
     con=PublicBase.establish_connection(
       adapter: 'postgresql',
       encoding: 'utf8',
-      hostname: ENV['AACT_PUBLIC_HOSTNAME'],
-      database: ENV['AACT_PUBLIC_DATABASE_NAME'],
+      hostname: ENV['AACT_PUBLIC_HOSTNAME'] || 'localhost',
+      database: ENV['AACT_PUBLIC_DATABASE_NAME'] || 'aact',
       username: ENV['AACT_DB_SUPER_USERNAME'],
     ).connection
     DatabaseCleaner.start
@@ -30,8 +30,8 @@ RSpec.configure do |config|
     con=PublicBase.establish_connection(
       adapter: 'postgresql',
       encoding: 'utf8',
-      hostname: ENV['AACT_PUBLIC_HOSTNAME'],
-      database: ENV['AACT_PUBLIC_DATABASE_NAME'],
+      hostname: ENV['AACT_PUBLIC_HOSTNAME'] || 'localhost',
+      database: ENV['AACT_PUBLIC_DATABASE_NAME'] || 'aact',
       username: ENV['AACT_DB_SUPER_USERNAME'],
     ).connection
     DatabaseCleaner.clean

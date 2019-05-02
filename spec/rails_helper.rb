@@ -5,25 +5,25 @@ require File.expand_path("../../config/environment", __FILE__)
 
 #  Define databases...
 abort("AACT_DB_SUPER_USERNAME env var must be set")   if !ENV["AACT_DB_SUPER_USERNAME"]
-abort("AACT_ADMIN_DATABASE_URL env var should be set to integrate with admin features")   if !ENV["AACT_ADMIN_DATABASE_URL"]
-abort("AACT_BACK_DATABASE_URL env var is not set")    if !ENV["AACT_BACK_DATABASE_URL"]
-abort("AACT_PUBLIC_DATABASE_URL env var is not set")  if !ENV["AACT_PUBLIC_DATABASE_URL"]
-abort("AACT_PUBLIC_DATABASE_NAME env var is not set") if !ENV["AACT_PUBLIC_DATABASE_NAME"]
+#abort("AACT_ADMIN_DATABASE_URL env var should be set to integrate with admin features")   if !ENV["AACT_ADMIN_DATABASE_URL"]
+#abort("AACT_BACK_DATABASE_URL env var is not set")    if !ENV["AACT_BACK_DATABASE_URL"]
+#abort("AACT_PUBLIC_DATABASE_URL env var is not set")  if !ENV["AACT_PUBLIC_DATABASE_URL"]
+#abort("AACT_PUBLIC_DATABASE_NAME env var is not set") if !ENV["AACT_PUBLIC_DATABASE_NAME"]
 
 #  Define info needed to deploy code to a servers with Capistrano
-abort("AACT_PUBLIC_HOSTNAME env var must be set for capistrano to deploy code to a server")  if !ENV["AACT_PUBLIC_HOSTNAME"]
-abort("AACT_GEM_HOME env var must be set for capistrano to deploy code to a server")         if !ENV["AACT_GEM_HOME"]
-abort("AACT_GEM_PATH env var must be set for capistrano to deploy code to a server")         if !ENV["AACT_GEM_PATH"]
-abort("AACT_PATH env var must be set for capistrano to deploy code to a server")             if !ENV["AACT_PATH"]
-abort("AACT_LD_LIBRARY_PATH env var must be set for capistrano to deploy code to a server")  if !ENV["AACT_LD_LIBRARY_PATH"]
-abort("AACT_DEPLOY_TO env var must be set for capistrano to deploy code to a server")        if !ENV["AACT_DEPLOY_TO"]
-abort("AACT_DEV_PUBLIC_HOSTNAME env var must be set for capistrano to deploy code to a server")  if !ENV["AACT_DEV_PUBLIC_HOSTNAME"]
-abort("AACT_DEV_REPO_URL env var must be set for capistrano to deploy code to a server")     if !ENV["AACT_DEV_REPO_URL"]
-abort("AACT_DEV_SERVER env var must be set for capistrano to deploy code to a server")       if !ENV["AACT_DEV_SERVER"]
-abort("AACT_SSH_KEY_DIR env var must be set for capistrano to deploy code to a server")      if !ENV["AACT_SSH_KEY_DIR"]
-abort("AACT_PROD_REPO_URL env var must be set for capistrano to deploy code to a server")    if !ENV["AACT_PROD_REPO_URL"]
-abort("AACT_PROD_SERVER env var must be set for capistrano to deploy code to a server")      if !ENV["AACT_PROD_SERVER"]
-abort("AACT_SERVER_USERNAME env var must be set for capistrano to deploy code to a server")  if !ENV["AACT_SERVER_USERNAME"]
+#abort("AACT_PUBLIC_HOSTNAME env var must be set for capistrano to deploy code to a server")  if !ENV["AACT_PUBLIC_HOSTNAME"]
+#abort("AACT_GEM_HOME env var must be set for capistrano to deploy code to a server")         if !ENV["AACT_GEM_HOME"]
+#abort("AACT_GEM_PATH env var must be set for capistrano to deploy code to a server")         if !ENV["AACT_GEM_PATH"]
+#abort("AACT_PATH env var must be set for capistrano to deploy code to a server")             if !ENV["AACT_PATH"]
+#abort("AACT_LD_LIBRARY_PATH env var must be set for capistrano to deploy code to a server")  if !ENV["AACT_LD_LIBRARY_PATH"]
+#abort("AACT_DEPLOY_TO env var must be set for capistrano to deploy code to a server")        if !ENV["AACT_DEPLOY_TO"]
+#abort("AACT_DEV_PUBLIC_HOSTNAME env var must be set for capistrano to deploy code to a server")  if !ENV["AACT_DEV_PUBLIC_HOSTNAME"]
+#abort("AACT_DEV_REPO_URL env var must be set for capistrano to deploy code to a server")     if !ENV["AACT_DEV_REPO_URL"]
+#abort("AACT_DEV_SERVER env var must be set for capistrano to deploy code to a server")       if !ENV["AACT_DEV_SERVER"]
+#abort("AACT_SSH_KEY_DIR env var must be set for capistrano to deploy code to a server")      if !ENV["AACT_SSH_KEY_DIR"]
+#abort("AACT_PROD_REPO_URL env var must be set for capistrano to deploy code to a server")    if !ENV["AACT_PROD_REPO_URL"]
+#abort("AACT_PROD_SERVER env var must be set for capistrano to deploy code to a server")      if !ENV["AACT_PROD_SERVER"]
+#abort("AACT_SERVER_USERNAME env var must be set for capistrano to deploy code to a server")  if !ENV["AACT_SERVER_USERNAME"]
 
 #  Define contact info...
 abort("AACT_ADMIN_EMAILS env var must be set to email people administering AACT")            if !ENV["AACT_ADMIN_EMAILS"]
@@ -49,12 +49,20 @@ RSpec.configure do |config|
     DatabaseCleaner[:active_record, { model: Support::SanityCheck }].clean_with(:truncation)
     DatabaseCleaner[:active_record, { model: Support::StudyXmlRecord }].clean_with(:truncation)
     DatabaseCleaner[:active_record, { model: Study }].clean_with(:truncation)
-  end
 
-  config.before(:each) do |example|
-    Util::DbManager.new({:event => Support::LoadEvent.new}).remove_indexes_and_constraints
+ end
+
+ config.before(:each) do |example|
     unit_test = ![:feature, :request].include?(example.metadata[:type])
     strategy = unit_test ? :transaction : :truncation
+
+    #  we deal with constraints and indexes in batch in DbManager by instantiating ActiveRecord::Base.connection.  It needs to always point to the test db.
+    url ="postgres://#{ENV['AACT_DB_SUPER_USERNAME']}@localhost:5432/aact_back_test"
+    con = ActiveRecord::Base.establish_connection(url).connection
+    allow_any_instance_of( Util::DbManager).to receive(:con).and_return(con)
+    allow_any_instance_of( ActiveRecord::Migration).to receive(:connection).and_return(con)
+    #allow(ActiveRecord::Migration).to receive(:connection).and_return(TestMigration.new.connection)
+    Util::DbManager.new({:event => Support::LoadEvent.new}).remove_indexes_and_constraints
     allow_any_instance_of( Util::DbManager ).to receive(:add_indexes_and_constraints).and_return(nil)
 
     DatabaseCleaner.strategy = strategy
@@ -72,8 +80,8 @@ RSpec.configure do |config|
     PublicBase.establish_connection(
       adapter: 'postgresql',
       encoding: 'utf8',
-      hostname: ENV['AACT_PUBLIC_HOSTNAME'],
-      database: ENV['AACT_PUBLIC_DATABASE_NAME'],
+      hostname: 'localhost',
+      database: 'aact_back_test', # should pull this from database.yml
       username: ENV['AACT_DB_SUPER_USERNAME'])
     @dbconfig = YAML.load(File.read('config/database.yml'))
     ActiveRecord::Base.establish_connection @dbconfig[:test]

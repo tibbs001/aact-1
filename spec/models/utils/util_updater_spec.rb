@@ -182,11 +182,11 @@ describe Util::Updater do
   end
 
   context 'when patient data section exists' do
-    nct_id='NCT02708238'
-    xml=Nokogiri::XML(File.read("spec/support/xml_data/#{nct_id}.xml"))
-    study=Study.new({xml: xml, nct_id: nct_id}).create
-
     it 'should have expected sharing ipd values' do
+      nct_id='NCT02708238'
+      xml=Nokogiri::XML(File.read("spec/support/xml_data/#{nct_id}.xml"))
+      study=Study.new({xml: xml, nct_id: nct_id}).create
+
       expect(study.plan_to_share_ipd).to eq('Yes')
       expect(study.plan_to_share_ipd_description).to eq('Publication')
     end
@@ -194,22 +194,22 @@ describe Util::Updater do
   end
 
   context 'study has fda regulated drug/device info' do
-    nct_id='NCT03204344'
-    xml=Nokogiri::XML(File.read("spec/support/xml_data/#{nct_id}.xml"))
-    study=Study.new({xml: xml, nct_id: nct_id}).create
-
     it 'should have expected fed regulation values' do
+      nct_id='NCT03204344'
+      xml=Nokogiri::XML(File.read("spec/support/xml_data/#{nct_id}.xml"))
+      study=Study.new({xml: xml, nct_id: nct_id}).create
+
       expect(study.is_fda_regulated_drug).to eq(false)
       expect(study.is_fda_regulated_device).to eq(false)
     end
   end
 
   context 'study has limitations and caveats' do
-    nct_id='NCT00023673'
-    xml=Nokogiri::XML(File.read("spec/support/xml_data/#{nct_id}.xml"))
-    study=Study.new({xml: xml, nct_id: nct_id}).create
-
     it 'should have expected limitations and caveats value' do
+      nct_id='NCT00023673'
+      xml=Nokogiri::XML(File.read("spec/support/xml_data/#{nct_id}.xml"))
+      study=Study.new({xml: xml, nct_id: nct_id}).create
+
       expect(study.limitations_and_caveats).to eq('This study was originally designed to escalate 3DRT via increasing doses per fraction. However, due to excessive toxicity at dose level 1 (75.25 Gy, 2.15 Gy/fraction), the protocol was amended in January 2003 to de-escalate 3DRT dose.')
     end
 

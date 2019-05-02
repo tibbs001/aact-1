@@ -46,7 +46,7 @@ set :format_options, command_output: true, log_file: "log/capistrano.log", color
 set :default_env, {
   'PATH'             => ENV['AACT_PATH'],
   'LD_LIBRARY_PATH'  => ENV['AACT_LD_LIBRARY_PATH'],
-  'APPLICATION_HOST' => ENV['APPLICATION_HOST'],
+  'APPLICATION_HOST' => ENV['APPLICATION_HOST'] || 'localhost'
   'RUBY_VERSION'     => 'ruby 2.4.0',
   'GEM_HOME'         => ENV['AACT_GEM_HOME'],
   'GEM_PATH'         => ENV['AACT_GEM_PATH'],

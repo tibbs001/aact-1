@@ -9,7 +9,7 @@ Rails.application.configure do
   config.action_mailer.smtp_settings =  {
     :address => '127.0.0.1',
     :port    => '25',
-    :domain  => ENV.fetch("APPLICATION_HOST")
+    :domain  => (ENV['APPLICATION_HOST'] || 'localhost')
   }
   config.active_support.deprecation = :log
   config.active_record.migration_error = :page_load
@@ -17,5 +17,5 @@ Rails.application.configure do
   config.assets.digest = true
   config.assets.raise_runtime_errors = true
   config.action_view.raise_on_missing_translations = true
-  config.action_mailer.default_url_options = { host: ENV.fetch("APPLICATION_HOST") }
+  config.action_mailer.default_url_options = { host: ENV['APPLICATION_HOST'] || 'localhost' }
 end
