@@ -174,12 +174,12 @@ module Util
       zip_file_name="#{static_copies_directory}/#{date_stamp}_clinical_trials.zip"
       File.delete(zip_file_name) if File.exist?(zip_file_name)
       Zip::File.open(zip_file_name, Zip::File::CREATE) {|zipfile|
-        zipfile.add('schema_diagram.png',schema_diagram_file)
-        zipfile.add('admin_schema_diagram.png',admin_schema_diagram_file)
-        zipfile.add('data_dictionary.xlsx',data_dictionary_file)
-        zipfile.add('postgres_data.dmp',pg_dump_file)
-        zipfile.add('nlm_protocol_definitions.html',nlm_protocol_file)
-        zipfile.add('nlm_results_definitions.html',nlm_results_file)
+        zipfile.add('schema_diagram.png',schema_diagram_file) if File.exists? schema_diagram_file
+        zipfile.add('admin_schema_diagram.png',admin_schema_diagram_file) if File.exists? admin_schema_diagram_file
+        zipfile.add('data_dictionary.xlsx',data_dictionary_file) if File.exists? data_dictionary_file
+        zipfile.add('postgres_data.dmp',pg_dump_file) if File.exists? pg_dump_file
+        zipfile.add('nlm_protocol_definitions.html',nlm_protocol_file) if File.exists? nlm_protocol_file
+        zipfile.add('nlm_results_definitions.html',nlm_results_file) if File.exists? nlm_results_file
       }
       return zip_file_name
     end
