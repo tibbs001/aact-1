@@ -107,15 +107,31 @@ module Util
     end
 
     def revoke_db_privs
-      log "  db_manager: set connection limit so only db owner can login..."
-      PublicBase.connection.execute("ALTER DATABASE #{public_db_name} CONNECTION LIMIT 0;")
-      PublicBase.connection.execute("ALTER DATABASE #{alt_db_name} CONNECTION LIMIT 0;")
+      begin
+        log "  db_manager: set connection limit so only db owner can login..."
+        PublicBase.connection.execute("ALTER DATABASE #{public_db_name} CONNECTION LIMIT 0;")
+        PublicBase.connection.execute("ALTER DATABASE #{alt_db_name} CONNECTION LIMIT 0;")
+      rescue => e
+         if e.message.include? "does not exist"
+           puts "Seems public db doesn't yet exist."
+         else
+           return
+         end
+      end
     end
 
     def grant_db_privs
-      log "  db_manager:  granting ctgov schema access to read_only..."
-      PublicBase.connection.execute("ALTER DATABASE #{public_db_name} CONNECTION LIMIT 200;")
-      PublicBase.connection.execute("ALTER DATABASE #{alt_db_name} CONNECTION LIMIT 200;")
+      begin
+        log "  db_manager:  granting ctgov schema access to read_only..."
+        PublicBase.connection.execute("ALTER DATABASE #{public_db_name} CONNECTION LIMIT 200;")
+        PublicBase.connection.execute("ALTER DATABASE #{alt_db_name} CONNECTION LIMIT 200;")
+      rescue => e
+         if e.message.include? "does not exist"
+           puts "Seems public db doesn't yet exist."
+         else
+           return
+         end
+      end
     end
 
     def public_db_accessible?
