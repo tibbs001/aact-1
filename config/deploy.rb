@@ -19,7 +19,7 @@ task :finish_up do
     # content of this directory can get big; we create this directory on a separate NAS drive
     source = ENV.fetch('AACT_STATIC_FILE_DIR','/aact-files')
     target = release_path.join('public/static')
-    execute :ln, '-s', source, target
+    execute :ln, '-s', source, target if File.exists?(source)
   end
 end
 
