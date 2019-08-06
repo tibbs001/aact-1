@@ -165,9 +165,9 @@ module Util
     end
 
     def save_static_copy
-      schema_diagram_file=File.open("#{schema_diagram}")
-      admin_schema_diagram_file=File.open("#{admin_schema_diagram}")
-      data_dictionary_file=File.open("#{data_dictionary}")
+      schema_diagram_file=File.open("#{schema_diagram}") if File.exists?("#{schema_diagram}")
+      admin_schema_diagram_file=File.open("#{admin_schema_diagram}") if File.exists?("#{admin_schema_diagram}")
+      data_dictionary_file=File.open("#{data_dictionary}") if File.exists?("#{data_dictionary}")
       nlm_protocol_file=make_file_from_website("nlm_protocol_definitions.html", nlm_protocol_data_url)
       nlm_results_file=make_file_from_website("nlm_results_definitions.html", nlm_results_data_url)
 
