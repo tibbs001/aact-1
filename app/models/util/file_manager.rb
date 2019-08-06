@@ -1,8 +1,29 @@
 require 'action_view'
 require 'open-uri'
+require 'fileutils'
 include ActionView::Helpers::NumberHelper
 module Util
   class FileManager
+
+    attr_accessor :root_dir
+
+    def self.initialize_static_file_directories
+      @root_dir = AACT::Application::AACT_STATIC_FILE_DIR
+      if ! File.exists?(@root_dir)
+        fu=FileUtils.new
+        fu.mkdir @root_dir
+        fu.mkdir_p "#{@root_dir}/static_db_copies/daily"
+        fu.mkdir_p "#{@root_dir}/static_db_copies/monthly"
+        fu.mkdir_p "#{@root_dir}/exported_files/daily"
+        fu.mkdir_p "#{@root_dir}/exported_files/monthly"
+        fu.mkdir_p "#{@root_dir}/db_backups"
+        fu.mkdir_p "#{@root_dir}/documentation"
+        fu.mkdir_p "#{@root_dir}/tmp"
+        fu.mkdir_p "#{@root_dir}/other"
+        fu.mkdir_p "#{@root_dir}/xml_downloads"
+      end
+      return @root_dir
+    end
 
     def nlm_protocol_data_url
       "https://prsinfo.clinicaltrials.gov/definitions.html"
