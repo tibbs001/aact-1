@@ -39,25 +39,29 @@ module Util
         success_code=true
         revoke_db_privs
 
-        # Refresh the alt database first. If something goes wrong, don't restore aact.
-        terminate_db_sessions(alt_db_name)
+        if ! PublicAltBase.database_exist?
+          PublicBase.connection.execute("CREATE DATABASE #{alt_db_name};")
+        else
+          # Refresh the alt database first. If something goes wrong, don't restore aact.
+          terminate_db_sessions(alt_db_name)
 
-        begin
-          #  Drop the existing ctgov schema with cascade. If dependencies exist on anything in ctgov, the restore won't be able to
-          #  drop before replacing - resulting in a db of duplicate data. So get rid of it using CASCADE'.
-          #  Wrap in begin/rescue/end in case we're running this on a db tht doesn't yet have the ctgov schem
-          log "  dropping ctgov schema in alt public database..."
-          PublicBase.establish_connection(AACT::Application::AACT_ALT_PUBLIC_DATABASE_URL).connection.execute("DROP SCHEMA ctgov CASCADE;")
-          PublicBase.establish_connection(AACT::Application::AACT_ALT_PUBLIC_DATABASE_URL).connection.execute("CREATE SCHEMA ctgov;")
-          PublicBase.establish_connection(AACT::Application::AACT_ALT_PUBLIC_DATABASE_URL).connection.execute("GRANT USAGE ON SCHEMA ctgov TO read_only;")
-        rescue
+          begin
+            #  Drop the existing ctgov schema with cascade. If dependencies exist on anything in ctgov, the restore won't be able to
+            #  drop before replacing - resulting in a db of duplicate data. So get rid of it using CASCADE'.
+            #  Wrap in begin/rescue/end in case we're running this on a db tht doesn't yet have the ctgov schem
+            log "  dropping ctgov schema in alt public database..."
+            PublicAltBase.connection.execute("DROP SCHEMA ctgov CASCADE;")
+            PublicAltBase.connection.execute("CREATE SCHEMA ctgov;")
+            PublicAltBase.connection.execute("GRANT USAGE ON SCHEMA ctgov TO read_only;")
+          rescue
+          end
         end
         log "  restoring alterntive public database..."
         cmd="pg_restore -c -j 5 -v -h #{public_hostname} -p 5432 -U #{db_superuser} -d #{alt_db_name} #{dump_file_name}"
         run_restore_command_line(cmd)
 
         log "  verifying alt public database..."
-        public_studies_count = PublicBase.connection.execute('select count(*) from studies;').first['count'].to_i
+        public_studies_count = PublicAltBase.connection.execute('select count(*) from studies;').first['count'].to_i
 
         if public_studies_count != background_study_count
           success_code = false
@@ -71,14 +75,19 @@ module Util
 
         # If all goes well with the alt db, proceed with regular public db
 
-        terminate_db_sessions(public_db_name)
-        begin
-          log "  dropping ctgov schema in main public database..."
-          PublicBase.connection.execute('DROP SCHEMA ctgov CASCADE;')
-          PublicBase.connection.execute('CREATE SCHEMA ctgov;')
-          PublicBase.connection.execute('GRANT USAGE ON SCHEMA ctgov TO read_only;')
-        rescue
+        if ! PublicBase.database_exist?
+          PublicBase.connection.execute("CREATE DATABASE #{public_db_name};")
+        else
+          begin
+            terminate_db_sessions(public_db_name)
+            log "  dropping ctgov schema in main public database..."
+            PublicBase.connection.execute('DROP SCHEMA ctgov CASCADE;')
+            PublicBase.connection.execute('CREATE SCHEMA ctgov;')
+            PublicBase.connection.execute('GRANT USAGE ON SCHEMA ctgov TO read_only;')
+          rescue
+          end
         end
+
         log "  restoring main public database..."
         cmd="pg_restore -c -j 5 -v -h #{public_hostname} -p 5432 -U #{db_superuser} -d #{public_db_name} #{dump_file_name}"
         run_restore_command_line(cmd)
