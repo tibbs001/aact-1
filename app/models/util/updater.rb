@@ -217,7 +217,7 @@ module Util
       old_count=(db_mgr.public_study_count - 10)
       new_count=Study.count
       load_event.add_problem("New db has fewer studies (#{new_count}) than current public db (#{old_count})") if old_count > new_count
-      log(load_event.problems if !load_event.problems.blank?)
+      log(load_event.problems) if !load_event.problems.blank?
       return load_event.problems.blank?
     end
 
