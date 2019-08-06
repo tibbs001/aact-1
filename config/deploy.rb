@@ -15,13 +15,28 @@ end
 desc 'Finalize the deployment'
 task :finish_up do
   on roles(:app) do
+    require 'util/file_manager'
     # create symlink to to the root directory containing aact static files
     # content of this directory can get big; we create this directory on a separate NAS drive
-    source = Util::FileManager.initialize_static_file_directories
+    source = ENV.fetch('AACT_STATIC_FILE_DIR','/aact-files')
+    if ! File.exists?(source)
+      require 'fileutils'
+      fu=FileUtils.new
+      fu.mkdir source
+      fu.mkdir_p "#{source}/static_db_copies/daily"
+      fu.mkdir_p "#{source}/static_db_copies/monthly"
+      fu.mkdir_p "#{source}/exported_files/daily"
+      fu.mkdir_p "#{source}/exported_files/monthly"
+      fu.mkdir_p "#{source}/db_backups"
+      fu.mkdir_p "#{source}/documentation"
+      fu.mkdir_p "#{source}/logs"
+      fu.mkdir_p "#{source}/tmp"
+      fu.mkdir_p "#{source}/other"
+      fu.mkdir_p "#{source}/xml_downloads"
+    end
+
     target = release_path.join('public/static')
     execute :ln, '-s', source, target
-    # restart the website
-    execute :touch, release_path.join('tmp/restart.txt')
   end
 end
 
