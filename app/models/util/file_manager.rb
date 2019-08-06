@@ -7,22 +7,22 @@ module Util
 
     attr_accessor :root_dir
 
-    def self.initialize_static_file_directories
-      @root_dir = AACT::Application::AACT_STATIC_FILE_DIR
-      if ! File.exists?(@root_dir)
+    def initialize
+      @root_dir = "#{Rails.public_path}/static"
+      if ! File.exists?(root_dir)
         fu=FileUtils.new
-        fu.mkdir @root_dir
-        fu.mkdir_p "#{@root_dir}/static_db_copies/daily"
-        fu.mkdir_p "#{@root_dir}/static_db_copies/monthly"
-        fu.mkdir_p "#{@root_dir}/exported_files/daily"
-        fu.mkdir_p "#{@root_dir}/exported_files/monthly"
-        fu.mkdir_p "#{@root_dir}/db_backups"
-        fu.mkdir_p "#{@root_dir}/documentation"
-        fu.mkdir_p "#{@root_dir}/tmp"
-        fu.mkdir_p "#{@root_dir}/other"
-        fu.mkdir_p "#{@root_dir}/xml_downloads"
+        fu.mkdir root_dir
+        fu.mkdir_p "#{root_dir}/static_db_copies/daily"
+        fu.mkdir_p "#{root_dir}/static_db_copies/monthly"
+        fu.mkdir_p "#{root_dir}/exported_files/daily"
+        fu.mkdir_p "#{root_dir}/exported_files/monthly"
+        fu.mkdir_p "#{root_dir}/db_backups"
+        fu.mkdir_p "#{root_dir}/documentation"
+        fu.mkdir_p "#{root_dir}/logs"
+        fu.mkdir_p "#{root_dir}/tmp"
+        fu.mkdir_p "#{root_dir}/other"
+        fu.mkdir_p "#{root_dir}/xml_downloads"
       end
-      return @root_dir
     end
 
     def nlm_protocol_data_url
@@ -35,50 +35,50 @@ module Util
 
     def static_copies_directory
       if created_first_day_of_month? Time.zone.now.strftime('%Y%m%d')
-        "#{Rails.public_path}/static/static_db_copies/monthly"
+        "#{root_dir}/static_db_copies/monthly"
       else
-        "#{Rails.public_path}/static/static_db_copies/daily"
+        "#{root_dir}/static_db_copies/daily"
       end
     end
 
     def flat_files_directory
       if created_first_day_of_month? Time.zone.now.strftime('%Y%m%d')
-        "#{Rails.public_path}/static/exported_files/monthly"
+        "#{root_dir}/exported_files/monthly"
       else
-        "#{Rails.public_path}/static/exported_files/daily"
+        "#{root_dir}/exported_files/daily"
       end
     end
 
     def pg_dump_file
-      "#{Rails.public_path}/static/tmp/postgres.dmp"
+      "#{root_dir}/tmp/postgres.dmp"
     end
 
     def dump_directory
-      "#{Rails.public_path}/static/tmp"
+      "#{root_dir}/tmp"
     end
 
     def backup_directory
-      "#{Rails.public_path}/static/db_backups"
+      "#{root_dir}/db_backups"
     end
 
     def xml_file_directory
-      "#{Rails.public_path}/static/xml_downloads"
+      "#{root_dir}/xml_downloads"
     end
 
     def admin_schema_diagram
-      "#{Rails.public_path}/static/documentation/aact_admin_schema.png"
+      "#{root_dir}/documentation/aact_admin_schema.png"
     end
 
     def schema_diagram
-      "#{Rails.public_path}/static/documentation/aact_schema.png"
+      "#{root_dir}/documentation/aact_schema.png"
     end
 
     def data_dictionary
-      "#{Rails.public_path}/static/documentation/aact_data_definitions.xlsx"
+      "#{root_dir}/documentation/aact_data_definitions.xlsx"
     end
 
     def table_dictionary
-      "#{Rails.public_path}/static/documentation/aact_tables.xlsx"
+      "#{root_dir}/documentation/aact_tables.xlsx"
     end
 
     def default_mesh_terms
@@ -90,16 +90,16 @@ module Util
     end
 
     def default_data_definitions
-      Roo::Spreadsheet.open("#{Rails.public_path}/static/documentation/aact_data_definitions.xlsx")
+      Roo::Spreadsheet.open("#{root_dir}/documentation/aact_data_definitions.xlsx")
     end
 
     def files_in(sub_dir, type=nil)
       # type ('monthly' or 'daily') identify the subdirectory to use to get the files.
       entries=[]
       if type.blank?
-        dir="#{Rails.public_path}/static/#{sub_dir}"
+        dir="#{root_dir}/#{sub_dir}"
       else
-        dir="#{Rails.public_path}/static/#{sub_dir}/#{type}"
+        dir="#{root_dir}/#{sub_dir}/#{type}"
       end
       file_names=Dir.entries(dir) - ['.','..']
       file_names.each {|file_name|
@@ -137,7 +137,7 @@ module Util
     end
 
     def make_file_from_website(fname, url)
-      return_file="#{Rails.public_path}/static/tmp/#{fname}"
+      return_file="#{root_dir}/tmp/#{fname}"
       File.delete(return_file) if File.exist?(return_file)
       open(url) {|site|
         open(return_file, "wb"){|out_file|
