@@ -37,7 +37,7 @@ module Util
       return nil if dump_file_name.nil?
       begin
         success_code=true
-        revoke_db_privs   # Prevent users from logging in while db restore is running.
+        revoke_db_privs
 
         # Refresh the alt database first. If something goes wrong, don't restore aact.
         terminate_db_sessions(alt_db_name)
@@ -107,34 +107,23 @@ module Util
     end
 
     def revoke_db_privs
-      begin
+      if PublicBase.database_exists?
         log "  db_manager: set connection limit so only db owner can login..."
         PublicBase.connection.execute("ALTER DATABASE #{public_db_name} CONNECTION LIMIT 0;")
         PublicBase.connection.execute("ALTER DATABASE #{alt_db_name} CONNECTION LIMIT 0;")
-      rescue => e
-         if e.message.include? "does not exist"
-           puts "Seems public db doesn't yet exist."
-         else
-           return
-         end
       end
     end
 
     def grant_db_privs
-      begin
+      if PublicBase.database_exists?
         log "  db_manager:  granting ctgov schema access to read_only..."
         PublicBase.connection.execute("ALTER DATABASE #{public_db_name} CONNECTION LIMIT 200;")
         PublicBase.connection.execute("ALTER DATABASE #{alt_db_name} CONNECTION LIMIT 200;")
-      rescue => e
-         if e.message.include? "does not exist"
-           puts "Seems public db doesn't yet exist."
-         else
-           return
-         end
       end
     end
 
     def public_db_accessible?
+      return false if ! PublicBase.database_exists?
       # we temporarily restrict access to the public db (set allowed connections to zero) during db restore.
       PublicBase.connection.execute("select datconnlimit from pg_database where datname='#{public_db_name}';").first["datconnlimit"].to_i > 0
     end
@@ -166,6 +155,7 @@ module Util
     end
 
     def terminate_db_sessions(db_name)
+      return false if ! PublicBase.database_exists?
       PublicBase.connection.execute("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname = '#{db_name}' AND usename <> '#{db_superuser}'")
     end
 
