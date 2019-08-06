@@ -10,18 +10,17 @@ module Util
     def initialize
       @root_dir = "#{Rails.public_path}/static"
       if ! File.exists?(root_dir)
-        fu=FileUtils.new
-        fu.mkdir root_dir
-        fu.mkdir_p "#{root_dir}/static_db_copies/daily"
-        fu.mkdir_p "#{root_dir}/static_db_copies/monthly"
-        fu.mkdir_p "#{root_dir}/exported_files/daily"
-        fu.mkdir_p "#{root_dir}/exported_files/monthly"
-        fu.mkdir_p "#{root_dir}/db_backups"
-        fu.mkdir_p "#{root_dir}/documentation"
-        fu.mkdir_p "#{root_dir}/logs"
-        fu.mkdir_p "#{root_dir}/tmp"
-        fu.mkdir_p "#{root_dir}/other"
-        fu.mkdir_p "#{root_dir}/xml_downloads"
+        FileUtils.mkdir root_dir
+        FileUtils.mkdir_p "#{root_dir}/static_db_copies/daily"
+        FileUtils.mkdir_p "#{root_dir}/static_db_copies/monthly"
+        FileUtils.mkdir_p "#{root_dir}/exported_files/daily"
+        FileUtils.mkdir_p "#{root_dir}/exported_files/monthly"
+        FileUtils.mkdir_p "#{root_dir}/db_backups"
+        FileUtils.mkdir_p "#{root_dir}/documentation"
+        FileUtils.mkdir_p "#{root_dir}/logs"
+        FileUtils.mkdir_p "#{root_dir}/tmp"
+        FileUtils.mkdir_p "#{root_dir}/other"
+        FileUtils.mkdir_p "#{root_dir}/xml_downloads"
       end
     end
 
