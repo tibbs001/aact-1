@@ -101,6 +101,7 @@ module Util
       create_calculated_values
       populate_admin_tables
       run_sanity_checks
+      return if ! full_featured  # no need to continue unless configured as a fully featured implementation of AACT
       study_counts[:processed]=db_mgr.background_study_count
       take_snapshot
       if refresh_public_db != true
