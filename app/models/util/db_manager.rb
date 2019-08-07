@@ -39,8 +39,9 @@ module Util
         success_code=true
         revoke_db_privs
 
-        if ! PublicAltBase.database_exist?
-          PublicBase.connection.execute("CREATE DATABASE #{alt_db_name};")
+        if ! PublicAltBase.database_exists?
+          # todo:  if the public db is on a different host, this will not work.
+          ActiveRecord::Base.connection.execute("CREATE DATABASE #{alt_db_name};")
         else
           # Refresh the alt database first. If something goes wrong, don't restore aact.
           terminate_db_sessions(alt_db_name)
@@ -75,8 +76,8 @@ module Util
 
         # If all goes well with the alt db, proceed with regular public db
 
-        if ! PublicBase.database_exist?
-          PublicBase.connection.execute("CREATE DATABASE #{public_db_name};")
+        if ! PublicBase.database_exists?
+          ActiveRecord::Base.connection.execute("CREATE DATABASE #{public_db_name};")
         else
           begin
             terminate_db_sessions(public_db_name)
