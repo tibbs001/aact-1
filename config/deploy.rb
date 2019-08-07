@@ -17,11 +17,15 @@ task :finish_up do
   on roles(:app) do
     # create symlink to to the root directory containing aact static files
     # content of this directory can get big; we create this directory on a separate NAS drive
-    target = release_path.join('public/static')
     source = ENV.fetch('AACT_STATIC_FILE_DIR','/aact-files')
-    execute :ln, '-s', source, target
-    # restart the website
-    execute :touch, release_path.join('tmp/restart.txt')
+    target = release_path.join('public/static')
+    cmd="ln -s #{source} #{target}"
+    begin
+      run(cmd)
+    rescue
+      # Don't fail if the source directory doesn't exist.
+      # the Util::FileManager will initialize public/static if necessary
+    end
   end
 end
 
