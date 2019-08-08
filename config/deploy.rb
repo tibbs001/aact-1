@@ -35,7 +35,7 @@ end
 
 # You can configure the Airbrussh format using :format_options.
 # These are the defaults.
-set :format_options, command_output: true, log_file: "#{ENV.fetch('STATIC_FILE_DIR','/aact-files')}/logs/capistrano_aact.log", color: :auto, truncate: :auto
+set :format_options, command_output: true, log_file: "log/capistrano.log", color: :auto, truncate: :auto
 
 # Default value for :pty is false
 # set :pty, true
@@ -49,7 +49,7 @@ set :format_options, command_output: true, log_file: "#{ENV.fetch('STATIC_FILE_D
 # Default value for default_env is {}
 
 set :default_env, {
-  'PATH' => '/usr/local/pgsql/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/home/tibbs001/bin:/usr/local/share',
+  'PATH'             => ENV['AACT_PATH'],
   'LD_LIBRARY_PATH' => ENV['LD_LIBRARY_PATH'],
   'APPLICATION_HOST' => 'localhost',
   'RUBY_VERSION' =>  'ruby 2.4.5',
