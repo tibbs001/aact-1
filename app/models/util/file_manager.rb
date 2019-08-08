@@ -61,7 +61,11 @@ module Util
     end
 
     def xml_file_directory
+      if File.exists?("#{root_dir}/xml_downloads")
       "#{root_dir}/xml_downloads"
+      else
+       root_dir
+      end
     end
 
     def admin_schema_diagram
