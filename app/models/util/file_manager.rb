@@ -89,7 +89,11 @@ module Util
     end
 
     def default_data_definitions
-      Roo::Spreadsheet.open("#{root_dir}/documentation/aact_data_definitions.xlsx")
+      begin
+        Roo::Spreadsheet.open("#{root_dir}/documentation/aact_data_definitions.xlsx")
+      rescue
+        # No guarantee the file exists
+      end
     end
 
     def files_in(sub_dir, type=nil)
