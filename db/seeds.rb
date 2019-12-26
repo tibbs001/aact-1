@@ -4,7 +4,7 @@ pub_con.execute("
     DO
     $do$
       BEGIN
-         IF NOT EXISTS ( SELECT FROM pg_catalog.pg_roles WHERE  rolname = 'read_only') THEN
+         IF NOT EXISTS ( SELECT * FROM pg_catalog.pg_roles WHERE  rolname = 'read_only') THEN
             CREATE ROLE read_only;
          END IF;
       END
