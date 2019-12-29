@@ -99,16 +99,16 @@ module Util
       log('finalizing load...')
       add_indexes_and_constraints
       create_calculated_values
-      populate_admin_tables
+      #populate_admin_tables
       run_sanity_checks
-      return unless full_featured  # no need to continue unless configured as a fully featured implementation of AACT
-      study_counts[:processed]=db_mgr.background_study_count
-      take_snapshot
+      #  UNDO this comment!!  study_counts[:processed]=db_mgr.background_study_count
+      #take_snapshot
       if refresh_public_db != true
         load_event.problems="DID NOT UPDATE PUBLIC DATABASE." + load_event.problems
         load_event.save!
       end
       db_mgr.grant_db_privs
+      return if full_featured == false  # no need to continue unless configured as a fully featured implementation of AACT
       load_event.complete({:study_counts=>study_counts})
       create_flat_files
       Admin::PublicAnnouncement.clear_load_message
@@ -219,10 +219,12 @@ module Util
     end
 
     def take_snapshot
-      log("creating downloadable versions of the database...")
       begin
+        pid = Process.fork do
+        log("creating downloadable versions of the database...")
         db_mgr.dump_database
         Util::FileManager.new.save_static_copy
+        end
       rescue => error
         load_event.add_problem("#{error.message} (#{error.class} #{error.backtrace}")
       end
@@ -274,12 +276,11 @@ module Util
       log('refreshing public db...')
       # recreate public db from back-end db
       if sanity_checks_ok?
-        submit_public_announcement("The AACT database is temporarily unavailable because it's being updated.")
-        db_mgr.refresh_public_db
-        return true
-      else
-        load_event.save!
-        return false
+      #  submit_public_announcement("The AACT database is temporarily unavailable because it's being updated.")
+        return db_mgr.refresh_public_db
+      #else
+      #  load_event.save!
+      #  return false
       end
     end
 

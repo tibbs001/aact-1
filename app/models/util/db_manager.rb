@@ -2,7 +2,7 @@ require 'open3'
 module Util
   class DbManager
 
-    attr_accessor :con, :public_con, :public_alt_con, :event, :migration_object, :fm
+    attr_accessor :con, :anonymous_con, :public_con, :public_alt_con, :event, :migration_object, :fm
 
     def initialize(params={})
       # 'event' keeps track of what happened during a single load event & then saves to LoadEvent table in the admin db, so we have a log
@@ -19,7 +19,7 @@ module Util
       File.delete(fm.pg_dump_file) if File.exist?(fm.pg_dump_file)
       cmd="pg_dump #{background_db_name} -v -h localhost -p 5432 -U #{super_username} --clean --no-owner --exclude-table ar_internal_metadata --exclude-table schema_migrations --schema ctgov -b -c -C -Fc -f #{fm.pg_dump_file}"
       run_command_line(cmd)
-      copy_dump_file_to_public_server
+      #copy_dump_file_to_public_server
     end
 
     def copy_dump_file_to_public_server
@@ -31,54 +31,83 @@ module Util
     end
 
     def refresh_public_db
-      dump_file_name=fm.pg_dump_file
-      return nil if dump_file_name.nil?
       begin
         success_code=true
         revoke_db_privs   # Prevent users from logging in while db restore is running.
 
-        # Refresh the aact_alt database first.  If something goes wrong, don't restore aact.
-        terminate_db_sessions(alt_db_name)
-
         begin
+
+          c = anonymous_con
+
+          c.execute("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname ='open_trials'")
+          c.execute("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname ='aact'")
+
+          cmd = "DROP DATABASE open_trials;"
+          log(cmd)
+          c.execute(cmd)
+
+          cmd = "CREATE DATABASE open_trials TEMPLATE aact;"
+          log(cmd)
+          c.execute(cmd)
+
+          cmd = "CREATE SCHEMA pubmed;"
+          log(cmd)
+          public_con.execute(cmd)
+
+          cmd = "CREATE SCHEMA lookup;"
+          log(cmd)
+          public_con.execute(cmd)
+
+          cmd = "ALTER USER #{super_username} IN DATABASE open_trials SET SEARCH_PATH = ctgov, support, lookup, pubmed, proj_tags;"
+          log(cmd)
+          c.execute(cmd)
+
+          cmd = "ALTER USER wiki IN DATABASE open_trials SET SEARCH_PATH = ctgov, support, lookup, pubmed, proj_tags;"
+          log(cmd)
+          c.execute(cmd)
+
           #  Drop the existing ctgov schema with cascade. If dependencies exist on anything in ctgov, the restore won't be able to
           #  drop before replacing - resulting in a db of duplicate data. So get rid of it using CASCADE'.
           #  Wrap in begin/rescue/end in case we're running this on a db tht doesn't yet have the ctgov schem
-          log "  dropping ctgov schema in alt public database..."
-          public_alt_con.execute("DROP SCHEMA ctgov CASCADE;")
-          public_alt_con.execute("CREATE SCHEMA ctgov;")
-          public_alt_con.execute("GRANT USAGE ON SCHEMA ctgov TO read_only;")
-        rescue
-        end
-        log "  restoring alterntive public database..."
-        cmd="pg_restore -c -j 5 -v -h #{public_host_name} -p 5432 -U #{super_username}  -d #{alt_db_name} #{dump_file_name}"
-        run_restore_command_line(cmd)
-
-        log "  verifying alt public database..."
-
-        if public_study_count != background_study_count
-          success_code = false
-          msg = "SOMETHING WENT WRONG! PROBLEM IN PRODUCTION DATABASE: #{alt_db_name}.  Study count is #{public_study_count}. Should be #{background_study_count}"
+          #log "  dropping ctgov schema in alt public database..."
+          #public_alt_con.execute("DROP SCHEMA ctgov CASCADE;")
+          #public_alt_con.execute("CREATE SCHEMA ctgov;")
+          #public_alt_con.execute("GRANT USAGE ON SCHEMA ctgov TO read_only;")
+        rescue => error
+          msg="#{error.message} (#{error.class} #{error.backtrace}"
           event.add_problem(msg)
           log msg
-          grant_db_privs
-          return false
+          success_code=false
         end
-        log "  all systems go... we can update primary public database...."
+        #log "  restoring alterntive public database..."
+        #cmd="pg_restore -c -j 5 -v -h #{public_host_name} -p 5432 -U #{super_username}  -d #{alt_db_name} #{dump_file_name}"
+        #run_restore_command_line(cmd)
+
+        #log "  verifying alt public database..."
+
+        #if public_study_count != background_study_count
+        #  success_code = false
+        #  msg = "SOMETHING WENT WRONG! PROBLEM IN PRODUCTION DATABASE: #{alt_db_name}.  Study count is #{public_study_count}. Should be #{background_study_count}"
+        #  event.add_problem(msg)
+        #  log msg
+        #  grant_db_privs
+        #  return false
+        #end
+        #log "  all systems go... we can update primary public database...."
 
         # If all goes well with AACT_ALT DB, proceed with regular AACT
 
-        terminate_db_sessions(db_name)
-        begin
-          log "  dropping ctgov schema in main public database..."
-          public_con.execute('DROP SCHEMA ctgov CASCADE;')
-          public_con.execute('CREATE SCHEMA ctgov;')
-          public_con.execute('GRANT USAGE ON SCHEMA ctgov TO read_only;')
-        rescue
-        end
-        log "  restoring main public database..."
-        cmd="pg_restore -c -j 5 -v -h #{public_host_name} -p 5432 -U #{super_username} -d #{db_name} #{dump_file_name}"
-        run_restore_command_line(cmd)
+        #terminate_db_sessions(db_name)
+        #begin
+        #  log "  dropping ctgov schema in main public database..."
+        #  public_con.execute('DROP SCHEMA ctgov CASCADE;')
+        #  public_con.execute('CREATE SCHEMA ctgov;')
+        #  public_con.execute('GRANT USAGE ON SCHEMA ctgov TO read_only;')
+        #rescue
+        #end
+        #log "  restoring main public database..."
+        #cmd="pg_restore -c -j 5 -v -h #{public_host_name} -p 5432 -U #{super_username} -d #{db_name} #{dump_file_name}"
+        #run_restore_command_line(cmd)
         grant_db_privs
         return success_code
       rescue => error
@@ -111,25 +140,25 @@ module Util
 
     def public_study_count
       begin
-        public_alt_con.execute('select count(*) from studies;').first['count'].to_i
+        public_con.execute('select count(*) from studies;').first['count'].to_i
       rescue
         return 0
       end
     end
 
     def revoke_db_privs
-      log "  db_manager: set connection limit so only db owner can login..."
+      log "  db_manager: set connection limit in #{db_name} so only db owner can login..."
       public_con.execute("ALTER DATABASE #{db_name} CONNECTION LIMIT 0;")
-      public_alt_con.execute("ALTER DATABASE #{alt_db_name} CONNECTION LIMIT 0;")
+      #public_alt_con.execute("ALTER DATABASE #{alt_db_name} CONNECTION LIMIT 0;")
     end
 
     def grant_db_privs
       public_con.execute("ALTER DATABASE #{db_name} CONNECTION LIMIT 200;")
       public_con.execute("GRANT USAGE ON SCHEMA ctgov TO read_only;")
       public_con.execute("GRANT SELECT ON ALL TABLES IN SCHEMA CTGOV TO READ_ONLY;")
-      public_alt_con.execute("ALTER DATABASE #{alt_db_name} CONNECTION LIMIT 200;")
-      public_alt_con.execute("GRANT USAGE ON SCHEMA ctgov TO read_only;")
-      public_alt_con.execute("GRANT SELECT ON ALL TABLES IN SCHEMA CTGOV TO READ_ONLY;")
+      #public_alt_con.execute("ALTER DATABASE #{alt_db_name} CONNECTION LIMIT 200;")
+      #public_alt_con.execute("GRANT USAGE ON SCHEMA ctgov TO read_only;")
+      #public_alt_con.execute("GRANT SELECT ON ALL TABLES IN SCHEMA CTGOV TO READ_ONLY;")
     end
 
     def public_db_accessible?
@@ -388,22 +417,29 @@ module Util
     def public_con
       return @public_con if @public_con and @public_con.active?
       @public_con = PublicBase.establish_connection(public_db_url).connection
-      @public_con.schema_search_path='ctgov'
+      @public_con.schema_search_path='ctgov, support, pubmed, lookup'
       return @public_con
     end
 
     def public_alt_con
       return @public_alt_con if @public_alt_con and @public_alt_con.active?
       @public_alt_con = PublicBase.establish_connection(alt_db_url).connection
-      @public_alt_con.schema_search_path='ctgov'
+      @public_alt_con.schema_search_path='ctgov, support, pubmed, lookup'
       return @public_alt_con
     end
 
     def con
       return @con if @con and @con.active?
       @con = ActiveRecord::Base.establish_connection(back_db_url).connection
-      @con.schema_search_path='ctgov'
+      @con.schema_search_path='ctgov, support, pubmed, lookup'
       return @con
+    end
+
+    def anonymous_con
+      return @anonymous_con if @anonymous_con and @anonymous_con.active?
+      @anonymous_con = ActiveRecord::Base.establish_connection(anonymous_db_url).connection
+      @anonymous_con.schema_search_path='ctgov, support, pubmed, lookup'
+      return @anonymous_con
     end
 
     def migration
@@ -437,6 +473,10 @@ module Util
 
     def public_db_url
       AACT::Application::AACT_PUBLIC_DATABASE_URL
+    end
+
+    def anonymous_db_url
+      AACT::Application::ANONYMOUS_DATABASE_URL
     end
 
     def alt_db_name

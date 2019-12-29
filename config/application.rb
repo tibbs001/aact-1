@@ -38,8 +38,8 @@ module AACT
       AACT_PUBLIC_HOSTNAME      =  ENV['AACT_PUBLIC_HOSTNAME'] || 'localhost'#Server on which the publicly accessible database resides
       AACT_BACK_DATABASE_NAME   =  ENV['AACT_BACK_DATABASE_NAME']|| 'aact'    # Name of background database used to process loads
       AACT_ADMIN_DATABASE_NAME  =  ENV['AACT_ADMIN_DATABASE_NAME'] || 'aact_admin' # Name of database used to support the AACT website
-      AACT_PUBLIC_DATABASE_NAME =  ENV['AACT_PUBLIC_DATABASE_NAME'] || 'aact'  # Name of database available to the public
-      AACT_ALT_PUBLIC_DATABASE_NAME = ENV['AACT_ALT_PUBLIC_DATABASE_NAME'] || 'aact_alt' # Name of alternate database available to the public
+      AACT_PUBLIC_DATABASE_NAME =  ENV['AACT_PUBLIC_DATABASE_NAME'] || 'open_trials'  # Name of database available to the public
+      AACT_ALT_PUBLIC_DATABASE_NAME = ENV['AACT_ALT_PUBLIC_DATABASE_NAME'] || 'open_trials_alt' # Name of alternate database available to the public
     else
       AACT_PUBLIC_HOSTNAME      = 'localhost'
       AACT_BACK_DATABASE_NAME   = 'aact_test'
@@ -51,14 +51,15 @@ module AACT
     AACT_ADMIN_DATABASE_URL      = "postgres://#{AACT_DB_SUPER_USERNAME}@#{APPLICATION_HOST}:5432/#{AACT_ADMIN_DATABASE_NAME}"
     AACT_PUBLIC_DATABASE_URL     = "postgres://#{AACT_DB_SUPER_USERNAME}@#{AACT_PUBLIC_HOSTNAME}:5432/#{AACT_PUBLIC_DATABASE_NAME}"
     AACT_ALT_PUBLIC_DATABASE_URL = "postgres://#{AACT_DB_SUPER_USERNAME}@#{AACT_PUBLIC_HOSTNAME}:5432/#{AACT_ALT_PUBLIC_DATABASE_NAME}"
+    ANONYMOUS_DATABASE_URL       = "postgres://#{AACT_DB_SUPER_USERNAME}@#{AACT_PUBLIC_HOSTNAME}:5432/template1"
 
     # If you deploy to a server, you need the following env variables defined for capistrano:
     # AACT_DEPLOY_TO
-    AACT_PROD_REPO_URL="git@github.com:ctti-clinicaltrials/aact.git"
-    AACT_PROD_SERVER="ctti-web-01.oit.duke.edu"
+    AACT_PROD_REPO_URL="git@github.com:tibbs001/aact.git"
+    AACT_PROD_SERVER="45.55.54.109"
     AACT_DEV_REPO_URL="git@github.com:tibbs001/aact-1.git"
-    AACT_DEV_SERVER="ctti-web-dev-01.oit.duke.edu"
-    AACT_SERVER_USERNAME="ctti-aact"
+    AACT_DEV_SERVER="45.55.54.109"
+    AACT_SERVER_USERNAME="tibbs001"
     #AACT_SSH_KEY_DIR="/#{AACT_SERVER_USER}/.ssh/id_rsa"
 
     #Also create directory: /aact-files (either at system root or in home directory) and set AACT_STATIC_FILE_DIR to that directory.
