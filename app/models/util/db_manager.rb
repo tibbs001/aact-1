@@ -122,9 +122,13 @@ module Util
     def clear_out_data_for(nct_ids)
       ids=nct_ids.map { |i| "'" + i.to_s + "'" }.join(",")
       loadable_tables.each { |table|
-        stime=Time.zone.now
-        con.execute("DELETE FROM #{table} WHERE nct_id IN (#{ids})")
-        log("deleted studies from #{table}   #{Time.zone.now - stime}")
+        begin
+          stime=Time.zone.now
+          con.execute("DELETE FROM #{table} WHERE nct_id IN (#{ids})")
+          log("deleted studies from #{table}   #{Time.zone.now - stime}")
+        rescue => error
+          log("error encountered when we tried to delete studies from #{table}   #{Time.zone.now - stime}")
+        end
       }
       delete_xml_records(ids)
     end
