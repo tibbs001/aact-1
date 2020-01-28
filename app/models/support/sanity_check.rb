@@ -1,16 +1,25 @@
 module Support
   class SanityCheck < Support::SupportBase
 
+    def run(event_type=nil)
+      save_row_counts
+      check_for_orphans
+      check_for_duplicates
+    end
+
     def save_row_counts
       Support::SupportBase.connection.execute('UPDATE sanity_checks SET most_current=false')
       Util::Updater.loadable_tables.each{|table_name|
-        table_name='references' if table_name=='study_references'
-        cnt=table_name.singularize.camelize.constantize.count
-        Support::SanityCheck.new({
-          :table_name=>table_name,
-          :row_count=>cnt,
-          :check_type=>'row count',
-          :most_current=>true}).save!
+        begin
+          table_name='references' if table_name=='study_references'
+          cnt=table_name.singularize.camelize.constantize.count
+          Support::SanityCheck.new({
+            :table_name=>table_name,
+            :row_count=>cnt,
+            :check_type=>'row count',
+            :most_current=>true}).save!
+        rescue
+        end
       }
     end
 
@@ -100,12 +109,6 @@ module Support
         col << "#{issue.check_type}: #{issue.table_name} #{ issue.row_count} #{issue.column_name} #{issue.description}"
       }
       return col
-    end
-
-    def run(event_type=nil)
-      save_row_counts
-      check_for_orphans
-      check_for_duplicates
     end
 
     def generate_report

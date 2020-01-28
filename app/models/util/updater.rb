@@ -276,7 +276,6 @@ module Util
       log('refreshing public db...')
       # recreate public db from back-end db
       if sanity_checks_ok?
-      #  submit_public_announcement("The AACT database is temporarily unavailable because it's being updated.")
         return db_mgr.refresh_public_db
       #else
       #  load_event.save!

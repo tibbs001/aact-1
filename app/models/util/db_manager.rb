@@ -2,7 +2,7 @@ require 'open3'
 module Util
   class DbManager
 
-    attr_accessor :con, :anonymous_con, :public_con, :public_alt_con, :event, :migration_object, :fm
+    attr_accessor :backend_con, :anonymous_con, :public_con, :public_alt_con, :event, :migration_object, :fm
 
     def initialize(params={})
       # 'event' keeps track of what happened during a single load event & then saves to LoadEvent table in the admin db, so we have a log
@@ -38,76 +38,26 @@ module Util
         begin
 
           c = anonymous_con
-
           c.execute("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname ='open_trials'")
           c.execute("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname ='aact'")
+          revoke_db_privs
 
-          cmd = "DROP DATABASE open_trials;"
-          log(cmd)
-          c.execute(cmd)
+          c = public_con
+          c.execute("DROP SCHEMA ctgov CASCADE")
 
-          cmd = "CREATE DATABASE open_trials TEMPLATE aact;"
-          log(cmd)
-          c.execute(cmd)
+          cmd = "pg_dump aact -h localhost -U #{super_username} --clean --no-owner --no-acl --exclude-table ar_internal_metadata --exclude-table schema_migrations --schema ctgov  | psql -h localhost -U #{super_username} open_trials"
+          run_command_line(cmd)
 
-          cmd = "CREATE SCHEMA pubmed;"
-          log(cmd)
-          public_con.execute(cmd)
+          c = anonymous_con
+          c.execute("ALTER USER #{super_username} IN DATABASE open_trials SET SEARCH_PATH = ctgov, support, lookup, pubmed, proj_tags")
+          c.execute("ALTER USER wiki IN DATABASE open_trials SET SEARCH_PATH = ctgov, support, lookup, pubmed, proj_tags")
 
-          cmd = "CREATE SCHEMA lookup;"
-          log(cmd)
-          public_con.execute(cmd)
-
-          cmd = "ALTER USER #{super_username} IN DATABASE open_trials SET SEARCH_PATH = ctgov, support, lookup, pubmed, proj_tags;"
-          log(cmd)
-          c.execute(cmd)
-
-          cmd = "ALTER USER wiki IN DATABASE open_trials SET SEARCH_PATH = ctgov, support, lookup, pubmed, proj_tags;"
-          log(cmd)
-          c.execute(cmd)
-
-          #  Drop the existing ctgov schema with cascade. If dependencies exist on anything in ctgov, the restore won't be able to
-          #  drop before replacing - resulting in a db of duplicate data. So get rid of it using CASCADE'.
-          #  Wrap in begin/rescue/end in case we're running this on a db tht doesn't yet have the ctgov schem
-          #log "  dropping ctgov schema in alt public database..."
-          #public_alt_con.execute("DROP SCHEMA ctgov CASCADE;")
-          #public_alt_con.execute("CREATE SCHEMA ctgov;")
-          #public_alt_con.execute("GRANT USAGE ON SCHEMA ctgov TO read_only;")
         rescue => error
           msg="#{error.message} (#{error.class} #{error.backtrace}"
           event.add_problem(msg)
           log msg
           success_code=false
         end
-        #log "  restoring alterntive public database..."
-        #cmd="pg_restore -c -j 5 -v -h #{public_host_name} -p 5432 -U #{super_username}  -d #{alt_db_name} #{dump_file_name}"
-        #run_restore_command_line(cmd)
-
-        #log "  verifying alt public database..."
-
-        #if public_study_count != background_study_count
-        #  success_code = false
-        #  msg = "SOMETHING WENT WRONG! PROBLEM IN PRODUCTION DATABASE: #{alt_db_name}.  Study count is #{public_study_count}. Should be #{background_study_count}"
-        #  event.add_problem(msg)
-        #  log msg
-        #  grant_db_privs
-        #  return false
-        #end
-        #log "  all systems go... we can update primary public database...."
-
-        # If all goes well with AACT_ALT DB, proceed with regular AACT
-
-        #terminate_db_sessions(db_name)
-        #begin
-        #  log "  dropping ctgov schema in main public database..."
-        #  public_con.execute('DROP SCHEMA ctgov CASCADE;')
-        #  public_con.execute('CREATE SCHEMA ctgov;')
-        #  public_con.execute('GRANT USAGE ON SCHEMA ctgov TO read_only;')
-        #rescue
-        #end
-        #log "  restoring main public database..."
-        #cmd="pg_restore -c -j 5 -v -h #{public_host_name} -p 5432 -U #{super_username} -d #{db_name} #{dump_file_name}"
-        #run_restore_command_line(cmd)
         grant_db_privs
         return success_code
       rescue => error
@@ -151,18 +101,12 @@ module Util
     end
 
     def revoke_db_privs
-      log "  db_manager: set connection limit in #{db_name} so only db owner can login..."
-      public_con.execute("ALTER DATABASE #{db_name} CONNECTION LIMIT 0;")
-      #public_alt_con.execute("ALTER DATABASE #{alt_db_name} CONNECTION LIMIT 0;")
+      log "  db_manager: set connection limit in open_trials so only db owner can login..."
+      anonymous_con.execute("ALTER DATABASE open_trials CONNECTION LIMIT 0;")
     end
 
     def grant_db_privs
-      public_con.execute("ALTER DATABASE #{db_name} CONNECTION LIMIT 200;")
-      public_con.execute("GRANT USAGE ON SCHEMA ctgov TO read_only;")
-      public_con.execute("GRANT SELECT ON ALL TABLES IN SCHEMA CTGOV TO READ_ONLY;")
-      #public_alt_con.execute("ALTER DATABASE #{alt_db_name} CONNECTION LIMIT 200;")
-      #public_alt_con.execute("GRANT USAGE ON SCHEMA ctgov TO read_only;")
-      #public_alt_con.execute("GRANT SELECT ON ALL TABLES IN SCHEMA CTGOV TO READ_ONLY;")
+      anonymous_con.execute("ALTER DATABASE open_trials CONNECTION LIMIT 200;")
     end
 
     def public_db_accessible?
@@ -201,8 +145,10 @@ module Util
     end
 
     def add_indexes_and_constraints
+      @con.schema_search_path='ctgov'
       add_indexes
       add_constraints
+      @con.schema_search_path='ctgov, support, pubmed, lookup'
     end
 
     def add_indexes
@@ -432,11 +378,11 @@ module Util
       return @public_alt_con
     end
 
-    def con
-      return @con if @con and @con.active?
-      @con = ActiveRecord::Base.establish_connection(back_db_url).connection
-      @con.schema_search_path='ctgov, support, pubmed, lookup'
-      return @con
+    def backend_con
+      return @backend_con if @backend_con and @backend_con.active?
+      @backend_con = ActiveRecord::Base.establish_connection(back_db_url).connection
+      @backend_con.schema_search_path='ctgov, support, pubmed, lookup'
+      return @backend_con
     end
 
     def anonymous_con
