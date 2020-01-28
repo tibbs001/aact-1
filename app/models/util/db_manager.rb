@@ -74,7 +74,7 @@ module Util
       loadable_tables.each { |table|
         begin
           stime=Time.zone.now
-          con.execute("DELETE FROM #{table} WHERE nct_id IN (#{ids})")
+          backend_con.execute("DELETE FROM #{table} WHERE nct_id IN (#{ids})")
           log("deleted studies from #{table}   #{Time.zone.now - stime}")
         rescue => error
           log("error encountered when we tried to delete studies from #{table}   #{Time.zone.now - stime}")
@@ -84,7 +84,7 @@ module Util
     end
 
     def delete_xml_records(ids)
-      con.execute("DELETE FROM support.study_xml_records WHERE nct_id IN (#{ids})")
+      backend_con.execute("DELETE FROM support.study_xml_records WHERE nct_id IN (#{ids})")
     end
 
     def background_study_count
@@ -145,10 +145,10 @@ module Util
     end
 
     def add_indexes_and_constraints
-      @con.schema_search_path='ctgov'
+      backend_con.schema_search_path='ctgov'
       add_indexes
       add_constraints
-      @con.schema_search_path='ctgov, support, pubmed, lookup'
+      backend_con.schema_search_path='ctgov, support, pubmed, lookup'
     end
 
     def add_indexes
@@ -163,7 +163,7 @@ module Util
               migration.add_index table_name, 'nct_id'
             end
             #  foreign keys that link to the studies table via the nct_id
-            if !con.foreign_keys(table_name).map(&:column).include?("nct_id")
+            if !backend_con.foreign_keys(table_name).map(&:column).include?("nct_id")
               migration.add_foreign_key table_name,  "studies", column: "nct_id", primary_key: "nct_id", name: "#{table_name}_nct_id_fkey"
             end
           end
@@ -193,13 +193,13 @@ module Util
       loadable_tables.each {|table_name|
         # remove foreign key that links most tables to Studies table via the NCT ID
         begin
-          con.remove_foreign_key table_name, column: :nct_id if con.foreign_keys(table_name).map(&:column).include?("nct_id")
+          backend_con.remove_foreign_key table_name, column: :nct_id if backend_con.foreign_keys(table_name).map(&:column).include?("nct_id")
         rescue => e
           log(e)
           event.add_problem("#{Time.zone.now}: #{e}")
         end
 
-        con.indexes(table_name).each{|index|
+        backend_con.indexes(table_name).each{|index|
           begin
             migration.remove_index(index.table, index.columns) if !should_keep_index?(index) and migration.index_exists?(index.table, index.columns)
           rescue => e
@@ -213,7 +213,7 @@ module Util
         table = constraint[:child_table]
         column = constraint[:child_column]
         begin
-          con.remove_foreign_key table, column: column if con.foreign_keys(table).map(&:column).include?(column)
+          backend_con.remove_foreign_key table, column: column if backend_con.foreign_keys(table).map(&:column).include?(column)
         rescue => e
           log(e)
           event.add_problem("#{Time.zone.now}: #{e}")
@@ -237,7 +237,7 @@ module Util
         use_cases
         use_case_attachments
       )
-      table_names=con.tables.reject{|table|blacklist.include?(table)}
+      table_names=backend_con.tables.reject{|table|blacklist.include?(table)}
     end
 
     def indexes
@@ -361,7 +361,7 @@ module Util
     end
 
     def indexes_for(table_name)
-      con.execute("select t.relname as table_name, i.relname as index_name, a.attname as column_name, ix.indisprimary as is_primary, ix.indisunique as is_unique from pg_class t, pg_class i, pg_index ix, pg_attribute a where t.oid = ix.indrelid and i.oid = ix.indexrelid and a.attrelid = t.oid and a.attnum = ANY(ix.indkey) and t.relkind = 'r' and t.relname = '#{table_name}';")
+      backend_con.execute("select t.relname as table_name, i.relname as index_name, a.attname as column_name, ix.indisprimary as is_primary, ix.indisunique as is_unique from pg_class t, pg_class i, pg_index ix, pg_attribute a where t.oid = ix.indrelid and i.oid = ix.indexrelid and a.attrelid = t.oid and a.attnum = ANY(ix.indkey) and t.relkind = 'r' and t.relname = '#{table_name}';")
     end
 
     def public_con
