@@ -43,7 +43,10 @@ module Util
           revoke_db_privs
 
           c = public_con
-          c.execute("DROP SCHEMA ctgov CASCADE")
+          begin
+            c.execute("DROP SCHEMA ctgov CASCADE")
+          rescue
+          end
 
           cmd = "pg_dump aact -h localhost -U #{super_username} --clean --no-owner --no-acl --exclude-table ar_internal_metadata --exclude-table schema_migrations --schema ctgov  | psql -h localhost -U #{super_username} open_trials"
           run_command_line(cmd)
