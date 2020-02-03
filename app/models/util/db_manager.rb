@@ -32,6 +32,7 @@ module Util
 
     def refresh_public_db
       begin
+        create_public_db if !public_db_exists?
         success_code=true
         revoke_db_privs   # Prevent users from logging in while db restore is running.
 
@@ -406,6 +407,21 @@ module Util
 
       cmd="pg_dump aact -v -h localhost -p 5432 -U #{super_username} --clean --no-owner --no-acl --exclude-table ar_internal_metadata --exclude-table schema_migrations --schema #{schema_name} -b -c -C -Fc -f #{file_name}"
       run_command_line(cmd)
+    end
+
+    def public_db_exists?
+      begin
+        ActiveRecord::Base.establish_connection(AactProj::Application::AACT_PUBLIC_DATABASE_URL).connection
+      rescue ActiveRecord::NoDatabaseError
+        false
+      else
+        true
+      end
+    end
+
+    def create_public_db
+      con=ActiveRecord::Base.establish_connection("postgres://#{AactProj::Application::AACT_DB_SUPER_USERNAME}@localhost:5432/#{AactProj::Application::AACT_PROJ_DB_NAME}").connection
+      con.execute("create database #{AactProj::Application::AACT_PUBLIC_DATABASE_NAME}")
     end
 
     def public_host_name
