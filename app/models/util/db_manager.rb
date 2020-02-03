@@ -411,7 +411,7 @@ module Util
 
     def public_db_exists?
       begin
-        ActiveRecord::Base.establish_connection(AactProj::Application::AACT_PUBLIC_DATABASE_URL).connection
+        ActiveRecord::Base.establish_connection(public_db_url).connection
       rescue ActiveRecord::NoDatabaseError
         false
       else
@@ -420,8 +420,8 @@ module Util
     end
 
     def create_public_db
-      con=ActiveRecord::Base.establish_connection("postgres://#{AactProj::Application::AACT_DB_SUPER_USERNAME}@localhost:5432/#{AactProj::Application::AACT_PROJ_DB_NAME}").connection
-      con.execute("create database #{AactProj::Application::AACT_PUBLIC_DATABASE_NAME}")
+      con=ActiveRecord::Base.establish_connection("postgres://#{super_username}@localhost:5432/#{background_db_name}").connection
+      con.execute("create database #{db_name}")
     end
 
     def public_host_name
